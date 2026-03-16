@@ -1,6 +1,13 @@
+#!/usr/bin/env node
 /**
  * MemOS Local MCP Server
  * 主机端：提供远程记忆查询服务
+ * 
+ * 使用方法:
+ *   npx memos-local-mcp-server
+ *   或
+ *   npm install -g memos-local-mcp-server
+ *   memos-mcp-server
  */
 
 import express from 'express';

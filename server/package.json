@@ -1,13 +1,17 @@
 {
   "name": "memos-local-mcp-server",
-  "version": "1.0.0",
-  "description": "MCP Server for MemOS Local - 暴露本地 MemOS 记忆给其他客户端",
+  "version": "1.0.1",
+  "description": "MCP Server for MemOS Local - 一键启动跨设备记忆共享服务",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "memos-mcp-server": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "postinstall": "npm run build || true"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
@@ -21,5 +25,7 @@
     "@types/node": "^22.10.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  }
+  },
+  "keywords": ["mcp", "memos", "openclaw", "memory", "ai"],
+  "license": "MIT"
 }
