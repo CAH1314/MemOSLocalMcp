@@ -1,0 +1,30 @@
+{
+  "name": "memos-local-mcp-client",
+  "version": "1.0.0",
+  "description": "OpenClaw 插件 - 连接远程 MemOS MCP Server 实现记忆共享",
+  "main": "dist/index.js",
+  "type": "module",
+  "openclaw": {
+    "plugins": {
+      "slots": ["memory"],
+      "entries": {
+        "memos-local-mcp-client": {
+          "type": "plugin",
+          "main": "dist/index.js"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
