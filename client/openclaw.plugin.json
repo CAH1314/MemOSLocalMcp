@@ -1,0 +1,56 @@
+{
+  "id": "memos-local-mcp-client",
+  "name": "MemOS Local MCP Client",
+  "description": "连接远程 MemOS MCP Server 实现记忆共享 - 客户端插件",
+  "kind": "memory",
+  "version": "1.0.0",
+  "homepage": "https://github.com/CAH1314/MemOSLocalMcp",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "serverUrl": {
+        "type": "string",
+        "description": "MCP Server 地址 (例如: http://192.168.1.100:18800)"
+      },
+      "autoReconnect": {
+        "type": "boolean",
+        "default": true,
+        "description": "断线自动重连"
+      },
+      "reconnectInterval": {
+        "type": "number",
+        "default": 5000,
+        "description": "重连间隔 (毫秒)"
+      },
+      "timeout": {
+        "type": "number",
+        "default": 30000,
+        "description": "请求超时 (毫秒)"
+      }
+    },
+    "required": ["serverUrl"]
+  },
+  "requirements": {
+    "node": ">=18.0.0",
+    "openclaw": ">=2026.2.0"
+  },
+  "setup": {
+    "notes": [
+      "1. 安装后，在 openclaw.json 中配置 serverUrl",
+      "2. 示例配置:",
+      "   {",
+      "     \"plugins\": {",
+      "       \"entries\": {",
+      "         \"memos-local-mcp-client\": {",
+      "           \"enabled\": true,",
+      "           \"config\": {",
+      "             \"serverUrl\": \"http://192.168.1.100:18800\"",
+      "           }",
+      "         }",
+      "       }",
+      "     }",
+      "   }",
+      "3. 重启 gateway: openclaw gateway restart"
+    ]
+  }
+}
