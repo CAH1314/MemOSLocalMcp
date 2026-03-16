@@ -10,7 +10,7 @@ import {
   TaskSummaryParams,
   SkillSearchParams,
   SkillGetParams,
-} from '../shared/types.js';
+} from './shared-types.js';
 
 // 导出可用工具列表
 export function getTools(): McpTool[] {

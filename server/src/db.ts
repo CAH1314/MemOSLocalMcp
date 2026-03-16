@@ -1,6 +1,8 @@
 /**
  * MemOS 数据库查询模块
  * 直接读取本地 memos.db
+ * 
+ * 注意：根据实际 memos.db schema 编写
  */
 
 import Database from 'better-sqlite3';
@@ -14,7 +16,7 @@ import {
   SkillInfo,
   SkillSearchParams,
   SkillGetParams,
-} from '../shared/types.js';
+} from './shared-types.js';
 
 export class MemOSDb {
   private db: Database.Database;
@@ -33,43 +35,41 @@ export class MemOSDb {
    * 搜索记忆
    */
   searchMemory(params: MemorySearchParams): MemorySearchResult {
-    const { query, maxResults = 10, minScore = 0.45, role } = params;
+    const { query, maxResults = 10, role } = params;
 
-    // 使用 FTS5 全文搜索 + 向量相似度
-    // 这里简化为关键词搜索
-    const sql = `
+    // 使用 LIKE 关键词搜索（简化版MVP）
+    let sql = `
       SELECT 
-        c.chunk_id as chunkId,
+        c.id as chunkId,
         c.content,
         c.role,
-        c.task_id as taskId,
-        c.created_at as createdAt,
+        c.task_id,
+        c.created_at,
         0.8 as score
       FROM chunks c
-      LEFT JOIN tasks t ON c.task_id = t.task_id
       WHERE c.content LIKE ?
-        ${role ? 'AND c.role = ?' : ''}
-        AND (t.status IS NULL OR t.status = 'completed')
-      ORDER BY c.created_at DESC
-      LIMIT ?
     `;
 
     const searchPattern = `%${query}%`;
-    const stmt = role
-      ? this.db.prepare(sql)
-      : this.db.prepare(sql.replace(' AND (t.status IS NULL OR t.status = \'completed\')', ''));
+    const paramsList: any[] = [searchPattern];
 
-    const rows = role
-      ? stmt.all(searchPattern, role, maxResults)
-      : stmt.all(searchPattern, maxResults);
+    if (role) {
+      sql += ` AND c.role = ?`;
+      paramsList.push(role);
+    }
+
+    sql += ` ORDER BY c.created_at DESC LIMIT ?`;
+    paramsList.push(maxResults);
+
+    const rows = this.db.prepare(sql).all(...paramsList);
 
     const chunks: MemoryChunk[] = rows.map((row: any) => ({
       chunkId: row.chunkId,
       content: row.content,
       role: row.role,
-      taskId: row.taskId || undefined,
+      taskId: row.task_id || undefined,
       score: row.score,
-      createdAt: row.createdAt,
+      createdAt: row.created_at,
     }));
 
     return { chunks, total: chunks.length };
@@ -81,14 +81,14 @@ export class MemOSDb {
   getMemory(chunkId: string): MemoryChunk | null {
     const sql = `
       SELECT 
-        chunk_id as chunkId,
+        id as chunkId,
         content,
         role,
-        task_id as taskId,
-        created_at as createdAt,
+        task_id,
+        created_at,
         0.8 as score
       FROM chunks
-      WHERE chunk_id = ?
+      WHERE id = ?
     `;
 
     const row = this.db.prepare(sql).get(chunkId) as any;
@@ -99,9 +99,9 @@ export class MemOSDb {
       chunkId: row.chunkId,
       content: row.content,
       role: row.role,
-      taskId: row.taskId || undefined,
+      taskId: row.task_id || undefined,
       score: row.score,
-      createdAt: row.createdAt,
+      createdAt: row.created_at,
     };
   }
 
@@ -111,12 +111,12 @@ export class MemOSDb {
   getTaskSummary(taskId: string): TaskSummary | null {
     const sql = `
       SELECT 
-        task_id as taskId,
+        id,
         title,
         status,
         summary
       FROM tasks
-      WHERE task_id = ?
+      WHERE id = ?
     `;
 
     const row = this.db.prepare(sql).get(taskId) as any;
@@ -133,7 +133,7 @@ export class MemOSDb {
     }
 
     return {
-      taskId: row.taskId,
+      taskId: row.id,
       title: row.title,
       status: row.status,
       summary,
@@ -146,9 +146,9 @@ export class MemOSDb {
   searchSkills(params: SkillSearchParams): SkillInfo[] {
     const { query, scope = 'self', maxResults = 10 } = params;
 
-    const sql = `
+    let sql = `
       SELECT 
-        s.skill_id as skillId,
+        s.id as skillId,
         s.name,
         s.description,
         s.quality_score as qualityScore,
@@ -156,17 +156,20 @@ export class MemOSDb {
         s.created_at as createdAt
       FROM skills s
       WHERE s.description LIKE ?
-        ${scope !== 'mix' ? 'AND s.visibility = ?' : ''}
-      ORDER BY s.quality_score DESC, s.created_at DESC
-      LIMIT ?
     `;
 
     const searchPattern = `%${query}%`;
-    const visibility = scope === 'public' ? 'public' : (scope === 'self' ? 'private' : null);
+    const paramsList: any[] = [searchPattern];
 
-    const rows = visibility
-      ? this.db.prepare(sql).all(searchPattern, visibility, maxResults)
-      : this.db.prepare(sql.replace(' AND s.visibility = ?', '')).all(searchPattern, maxResults);
+    if (scope !== 'mix') {
+      sql += ` AND s.visibility = ?`;
+      paramsList.push(scope === 'public' ? 'public' : 'private');
+    }
+
+    sql += ` ORDER BY s.quality_score DESC, s.created_at DESC LIMIT ?`;
+    paramsList.push(maxResults);
+
+    const rows = this.db.prepare(sql).all(...paramsList);
 
     return rows.map((row: any) => ({
       skillId: row.skillId,
@@ -182,15 +185,16 @@ export class MemOSDb {
    * 获取技能详情
    */
   getSkill(params: SkillGetParams): SkillInfo | null {
-    const { skillId, taskId } = params;
+    let { skillId, taskId } = params;
 
     if (taskId) {
       // 通过 taskId 查找关联的 skill
       const sql = `
-        SELECT s.skill_id as skillId
+        SELECT s.id as skillId
         FROM skills s
-        JOIN tasks t ON t.task_id = ?
-        WHERE s.name LIKE '%' || t.title || '%'
+        WHERE s.name IN (
+          SELECT title FROM tasks WHERE id = ?
+        )
         LIMIT 1
       `;
       const row = this.db.prepare(sql).get(taskId) as any;
@@ -203,32 +207,19 @@ export class MemOSDb {
 
     const sql = `
       SELECT 
-        s.skill_id as skillId,
-        s.name,
-        s.description,
-        s.quality_score as qualityScore,
-        s.visibility,
-        s.created_at as createdAt
-      FROM skills s
-      WHERE s.skill_id = ?
+        id as skillId,
+        name,
+        description,
+        quality_score as qualityScore,
+        visibility,
+        created_at as createdAt
+      FROM skills
+      WHERE id = ?
     `;
 
     const row = this.db.prepare(sql).get(skillId) as any;
 
     if (!row) return null;
-
-    // 获取版本历史
-    const versionsSql = `
-      SELECT 
-        version,
-        content,
-        created_at as createdAt,
-        change_summary as changeSummary
-      FROM skill_versions
-      WHERE skill_id = ?
-      ORDER BY created_at DESC
-    `;
-    const versions = this.db.prepare(versionsSql).all(skillId);
 
     return {
       skillId: row.skillId,
@@ -236,7 +227,7 @@ export class MemOSDb {
       description: row.description,
       qualityScore: row.qualityScore || 0,
       visibility: row.visibility,
-      versions: versions,
+      versions: [],
     };
   }
 

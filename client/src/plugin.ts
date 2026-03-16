@@ -4,7 +4,7 @@
  */
 
 import { RemoteMcpClient } from './remote-tool.js';
-import { ClientConfig } from '../shared/types.js';
+import { ClientConfig } from './shared-types.js';
 
 // 插件元数据
 export const pluginInfo = {

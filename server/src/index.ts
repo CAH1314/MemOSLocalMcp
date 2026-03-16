@@ -6,7 +6,7 @@
 import express from 'express';
 import { MemOSDb } from './db.js';
 import { getTools, handleToolCall } from './tools.js';
-import { McpRequest, McpResponse, ERROR_CODES } from '../shared/types.js';
+import { McpRequest, McpResponse, ERROR_CODES } from './shared-types.js';
 
 const app = express();
 app.use(express.json());
@@ -14,7 +14,7 @@ app.use(express.json());
 // 环境变量配置
 const config = {
   dbPath: process.env.MEMOS_DB_PATH,
-  port: parseInt(process.env.SERVER_PORT || '18800', 
+  port: parseInt(process.env.SERVER_PORT || '18800'),
   host: process.env.SERVER_HOST || '0.0.0.0',
 };
 

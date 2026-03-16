@@ -7,7 +7,7 @@ import {
   ClientConfig,
   McpRequest,
   McpResponse,
-} from '../shared/types.js';
+} from './shared-types.js';
 
 export class RemoteMcpClient {
   private serverUrl: string;
@@ -47,7 +47,7 @@ export class RemoteMcpClient {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data: McpResponse = await response.json();
+    const data = await response.json() as McpResponse;
 
     if (data.error) {
       throw new Error(`MCP Error: ${data.error.message} (code: ${data.error.code})`);
